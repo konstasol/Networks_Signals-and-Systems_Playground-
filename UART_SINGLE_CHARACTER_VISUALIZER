@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>UART Visualizer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2em;
+      background: #1e1e1e;
+      color: white;
+    }
+    input {
+      font-size: 1.2em;
+      padding: 0.5em;
+      margin-bottom: 1em;
+    }
+    .bubble {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      margin: 5px;
+      border-radius: 50%;
+      line-height: 30px;
+      font-weight: bold;
+    }
+    .mark { background-color: cadetblue; color: azure; }
+    .space { background-color: indigo; color: azure; }
+    .label { font-size: 0.8em; display: block; margin-top: 5px; }
+
+    /* Legend styles */
+    .legend {
+      margin-top: 3em;
+      font-size: 0.9em;
+    }
+    .legend-item {
+      display: inline-block;
+      margin: 0 10px;
+    }
+    .legend-color {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      vertical-align: middle;
+      margin-right: 5px;
+      border-radius: 3px;
+    }
+    .legend-mark { background-color: cadetblue; }
+    .legend-space { background-color: indigo; }
+  </style>
+</head>
+<body>
+  <h1>UART Frame Visualizer</h1>
+  <p>Enter a character:</p>
+  <input type="text" id="charInput" maxlength="1" />
+  <div id="output"></div>
+
+  <!-- Legend/Υπόμνημα -->
+  <div class="legend">
+    <div class="legend-item"><span class="legend-color legend-mark"></span>mark (logic high / 1)</div>
+    <div class="legend-item"><span class="legend-color legend-space"></span>space (logic low / 0)</div>
+  </div>
+
+  <script>
+    const input = document.getElementById("charInput");
+    const output = document.getElementById("output");
+
+    input.addEventListener("input", () => {
+      const char = input.value;
+      if (!char) return (output.innerHTML = "");
+
+      // Βρες τον ASCII κωδικό του χαρακτήρα
+      const ascii = char.charCodeAt(0);
+
+      // Μετατροπή σε δυαδικό με 8 bits και αντιστροφή (LSB first)
+      let bits = ascii.toString(2).padStart(8, "0").split("").reverse();
+
+      // Δημιουργία του UART frame: Start bit (0), 8 data bits, Stop bit (1)
+      const frame = ["0", ...bits, "1"];
+
+      // Προβολή της ASCII πληροφορίας (με MSB first για αναγνωσιμότητα)
+      output.innerHTML = `<p>ASCII '${char}' = ${ascii} = ${bits.slice().reverse().join("")}</p>`;
+
+      // Ετικέτες για κάθε bit: Start, Data, Stop
+      const bitLabels = frame.map((bit, i) => {
+        if (i === 0) return "Start";
+        if (i === frame.length - 1) return "Stop";
+        return "Data";
+      });
+
+      // Δημιουργία φυσαλίδων για κάθε bit
+      output.innerHTML += frame
+        .map((bit, i) => {
+          return `<div class="bubble ${bit === "1" ? "mark" : "space"}">${bit}<span class="label">${bitLabels[i]}</span></div>`;
+        })
+        .join("");
+    });
+  </script>
+</body>
+</html>
