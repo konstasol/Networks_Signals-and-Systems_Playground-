@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Serial Synchronous Transmission Visualizer</title>
+  <style>
+    body {
+      background-color: #121212;
+      font-family: monospace;
+      color: #fff;
+      padding: 2rem;
+      text-align: center;
+    }
+    input {
+      font-size: 1.2rem;
+      padding: 0.5rem;
+      width: 300px;
+      margin-bottom: 1rem;
+    }
+    button {
+      font-size: 1rem;
+      margin: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      border: none;
+      background-color: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    .bubble-container {
+      display: flex;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      overflow-x: auto;
+    }
+    .bubble {
+      border: 2px solid #fff;
+      border-radius: 10px;
+      padding: 0.6rem;
+      background-color: #1e1e1e;
+      min-width: 80px;
+      text-align: center;
+    }
+    .bubble-label {
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+    .signal-row {
+      display: flex;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      overflow-x: auto;
+    }
+    .bit {
+      font-size: 1.2rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      color: #fff;
+    }
+    .bit-0 {
+      background-color: #555;
+    }
+    .bit-1 {
+      background-color: #00c853;
+    }
+  </style>
+</head>
+<body>
+  <h1>Serial Transmission Visualizer</h1>
+  <p>Enter a message to see how it is transmitted serially with synchronization and padding.</p>
+
+  <input type="text" id="messageInput" placeholder="Enter message (e.g. HELLO)" />
+  <button onclick="transmit()">Transmit</button>
+  <button onclick="clearChannel()">Clear</button>
+
+  <div class="bubble-container" id="channel"></div>
+  <div class="signal-row" id="signal"></div>
+
+  <script>
+    const hex = char => '0x' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+    const bin = char => char.charCodeAt(0).toString(2).padStart(8, '0');
+    const addBubble = (label, hexVal, binVal) => {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = `<strong>${label}</strong><div class='bubble-label'>${hexVal}</div><div class='bubble-label'>${binVal}</div>`;
+      document.getElementById('channel').appendChild(bubble);
+      addBits(binVal);
+    };
+
+    const addBits = (binVal) => {
+      const signal = document.getElementById('signal');
+      for (const bit of binVal) {
+        const bitDiv = document.createElement('div');
+        bitDiv.className = `bit bit-${bit}`;
+        bitDiv.innerText = bit;
+        signal.appendChild(bitDiv);
+      }
+    };
+
+    function transmit() {
+      clearChannel();
+      const input = document.getElementById('messageInput').value.toUpperCase();
+      // Add SYN twice
+      addBubble('SYN', '0x16', '00010110');
+      addBubble('SYN', '0x16', '00010110');
+      // Add message characters
+      for (const char of input) {
+        addBubble(char, hex(char), bin(char));
+      }
+      // Add PAD
+      addBubble('PAD', '0xFF', '11111111');
+    }
+
+    function clearChannel() {
+      document.getElementById('channel').innerHTML = '';
+      document.getElementById('signal').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
