@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiplexing Visualizer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      padding: 2em;
+      text-align: center;
+    }
+    h1 {
+      color: #00e0ff;
+    }
+    .diagram {
+      background: #222;
+      border: 2px solid #444;
+      padding: 1em;
+      border-radius: 1em;
+      margin: 2em auto;
+      width: 90%;
+      max-width: 600px;
+    }
+    .channel {
+      height: 20px;
+      margin: 5px 0;
+      position: relative;
+      background: #333;
+    }
+    .flow {
+      height: 100%;
+      position: absolute;
+      animation: move 2s linear infinite;
+    }
+    @keyframes move {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+    .flow1 { background: red; width: 40%; }
+    .flow2 { background: lime; width: 40%; }
+    .flow3 { background: blue; width: 40%; }
+  </style>
+</head>
+<body>
+  <h1>Multiplexing Visualizer</h1>
+  <p>Visualizing FDM, TDM, and CDMA on separate levels</p>
+
+  <div class="diagram">
+    <h2>FDM</h2>
+    <div class="channel"><div class="flow flow1"></div></div>
+    <div class="channel"><div class="flow flow2"></div></div>
+    <div class="channel"><div class="flow flow3"></div></div>
+    <p style="font-size: 0.9em;">Each user gets their own channel (like separate frequencies)</p>
+  </div>
+
+  <div class="diagram">
+    <h2>TDM</h2>
+    <div class="channel">
+      <div class="flow flow1" style="animation-delay: 0s;"></div>
+      <div class="flow flow2" style="animation-delay: 0.7s;"></div>
+      <div class="flow flow3" style="animation-delay: 1.4s;"></div>
+    </div>
+    <p style="font-size: 0.9em;">Users take turns using the same channel at different time slots</p>
+  </div>
+
+  <div class="diagram">
+    <h2>CDMA</h2>
+    <div class="channel">
+      <div class="flow flow1" style="opacity: 0.7;"></div>
+      <div class="flow flow2" style="opacity: 0.7;"></div>
+      <div class="flow flow3" style="opacity: 0.7;"></div>
+    </div>
+    <p style="font-size: 0.9em;">All users transmit simultaneously over the same channel, separated by code</p>
+  </div>
+</body>
+</html>
