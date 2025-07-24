@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subnet Calculator 👑</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #1e1e2f, #3a3a5c);
+      color: #fff;
+      padding: 2em;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 1em;
+      border: none;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #6a5acd;
+      color: white;
+      border: none;
+      padding: 0.7em 1.5em;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    #results {
+      margin-top: 2em;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 1em;
+      border-radius: 10px;
+    }
+    span {
+      font-weight: bold;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌐 Subnet Calculator</h1>
+
+  <!-- Input Form -->
+  <form id="subnetForm">
+    <label>IP Address:
+      <input type="text" id="ip" placeholder="e.g. 192.168.1.10" required>
+    </label>
+    <label>CIDR Prefix (1-32):
+      <input type="number" id="cidr" min="1" max="32" placeholder="e.g. 24" required>
+    </label>
+    <button type="submit">Calculate</button>
+  </form>
+
+  <!-- Output Section -->
+  <div id="results" style="display:none;">
+    <h2>📊 Results:</h2>
+    <p><strong>Subnet Mask:</strong> <span id="subnetMask"></span></p>
+    <p><strong>Network Address:</strong> <span id="networkAddress"></span></p>
+    <p><strong>Broadcast Address:</strong> <span id="broadcastAddress"></span></p>
+    <p><strong>Usable Hosts:</strong> <span id="hosts"></span></p>
+    <p><strong>Usable Range:</strong> <span id="range"></span></p>
+  </div>
+
+  <script>
+    // Convert a 32-bit number to IP address string
+    function numToIP(num) {
+      return [
+        (num >>> 24),
+        (num >>> 16) & 255,
+        (num >>> 8) & 255,
+        num & 255
+      ].join('.');
+    }
+
+    // Form submission handler
+    document.getElementById('subnetForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const ip = document.getElementById('ip').value.trim();
+      const cidr = parseInt(document.getElementById('cidr').value);
+
+      // Validate CIDR
+      if (!ip || isNaN(cidr) || cidr < 1 || cidr > 32) {
+        alert('Please enter a valid IP and CIDR (1–32).');
+        return;
+      }
+
+      // Validate IP
+      const ipParts = ip.split('.').map(Number);
+      if (ipParts.length !== 4 || ipParts.some(x => x < 0 || x > 255)) {
+        alert('Invalid IP address format.');
+        return;
+      }
+
+      // Convert IP to a 32-bit number
+      const ipNum = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+
+      // Create subnet mask
+      const mask = cidr === 0 ? 0 : (~0 << (32 - cidr)) >>> 0;
+
+      // Convert subnet mask to string
+      const subnetMaskStr = [
+        mask >>> 24,
+        (mask >> 16) & 255,
+        (mask >> 8) & 255,
+        mask & 255
+      ].join('.');
+
+      // Calculate network and broadcast addresses
+      const network = ipNum & mask;
+      const broadcast = network | (~mask >>> 0);
+
+      // Calculate usable host range
+      const firstIP = cidr < 31 ? network + 1 : network;
+      const lastIP = cidr < 31 ? broadcast - 1 : broadcast;
+      const totalHosts = cidr >= 31 ? (cidr === 31 ? 2 : 1) : (2 ** (32 - cidr)) - 2;
+
+      // Show results
+      document.getElementById('subnetMask').textContent = subnetMaskStr;
+      document.getElementById('networkAddress').textContent = numToIP(network);
+      document.getElementById('broadcastAddress').textContent = numToIP(broadcast);
+      document.getElementById('hosts').textContent = totalHosts;
+      document.getElementById('range').textContent = `${numToIP(firstIP)} - ${numToIP(lastIP)}`;
+      document.getElementById('results').style.display = 'block';
+    });
+  </script>
+
+</body>
+</html>
