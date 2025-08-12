@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pipelining Delay Calculator — Nota's Nano-Tool</title>
+  <style>
+    /* Styling with CSS variables for a modern look */
+    :root{
+      --bg:#0f1724;
+      --card:#111827;
+      --accent:#7c3aed;
+      --muted:#9ca3af;
+      --glass:rgba(255,255,255,0.04);
+    }
+    *{
+      box-sizing:border-box;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(160deg,#071030 0%, #071026 40%, #071018 100%);
+      color:#e6eef8;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+    }
+    .wrap{
+      width:100%;
+      max-width:920px;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    header .logo{
+      width:64px;
+      height:64px;
+      border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),#06b6d4);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      color:white;
+      box-shadow:0 6px 18px rgba(12,12,40,0.6);
+    }
+    header h1{
+      font-size:20px;
+      margin:0;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+    }
+    .card{
+      background:linear-gradient(180deg,var(--card),#0b1220);
+      padding:18px;
+      border-radius:14px;
+      box-shadow:0 8px 30px rgba(2,6,23,0.6);
+      border:1px solid var(--glass);
+    }
+    label{
+      display:block;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:8px;
+    }
+    input[type=text], input[type=number]{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.06);
+      background:transparent;
+      color:inherit;
+      font-size:14px;
+    }
+    .row{
+      display:flex;
+      gap:12px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+    }
+    button{
+      background:var(--accent);
+      color:white;
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      font-weight:600;
+      cursor:pointer;
+    }
+    button.secondary{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.06);
+    }
+    .results{
+      margin-top:12px;
+      padding:12px;
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .result-line{
+      display:flex;
+      justify-content:space-between;
+      padding:6px 0;
+      border-bottom:1px dashed rgba(255,255,255,0.02);
+    }
+    .result-line:last-child{
+      border-bottom:0;
+    }
+    .muted{
+      color:var(--muted);
+    }
+    footer{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    @media(max-width:780px){
+      .grid{
+        grid-template-columns:1fr;
+      }
+      header{
+        gap:10px;
+      }
+      .row{
+        flex-direction:column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">N</div>
+      <div>
+        <h1>Pipelining Delay Calculator — Networks (CS Students edition)</h1>
+        <div class="small">Enter the values and hit <strong>Calculate</strong>. I'll (Natassa) handle the math — you enjoy your coffee.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <label>📍 Start Point
+          <input id="start" type="text" placeholder="e.g. PC, Source" value="PC"></label>
+
+        <label>🛣️ Number of Routers
+          <input id="routers" type="number" min="0" step="1" value="3"></label>
+
+        <label>💾 Total Message Size (Mbits)
+          <input id="Ltotal" type="number" min="0.0001" step="0.0001" value="10"></label>
+
+        <label>⚙️ Transmission Rate R (Mbps)
+          <input id="R" type="number" min="0.0001" step="0.0001" value="5"></label>
+
+        <label>📦 Number of Packets (N)
+          <input id="N" type="number" min="1" step="1" value="5"></label>
+
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button id="calc">Calculate</button>
+          <button id="reset" class="secondary">Reset</button>
+          <button id="example" class="secondary">Example</button>
+        </div>
+
+        <div id="error" class="small" style="margin-top:10px;color:#ffb4b4;display:none"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">📊 Results</h3>
+        <div id="results" class="results">
+          <div class="muted">No calculation yet — press <strong>Calculate</strong>.</div>
+        </div>
+
+        <footer>
+          <div>Note: Calculations only consider transmission delay (no propagation/queueing/processing delays).</div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Shortcut for document.getElementById
+    const $ = id => document.getElementById(id);
+
+    // Format numbers nicely with commas and fixed decimals
+    const format = (v, d=6) => Number(v).toLocaleString('en-US', {
+      maximumFractionDigits:d, minimumFractionDigits: d>0?Math.min(d,2):0
+    });
+
+    // Show error message in the UI
+    function showError(msg){
+      const e = $('error');
+      e.style.display = 'block';
+      e.textContent = msg;
+    }
+
+    // Clear error message
+    function clearError(){
+      const e = $('error');
+      e.style.display = 'none';
+      e.textContent = '';
+    }
+
+    // Main compute function
+    function compute(){
+      clearError();
+
+      // Read and parse inputs
+      const start = $('start').value.trim() || 'Source';
+      const num_routers = Number($('routers').value);
+      const L_total_Mbits = Number($('Ltotal').value);
+      const R = Number($('R').value);
+      const N = Number($('N').value);
+
+      // Validate inputs are finite numbers
+      if (!Number.isFinite(num_routers) || !Number.isFinite(L_total_Mbits) || !Number.isFinite(R) || !Number.isFinite(N)){
+        showError('Please enter valid numbers — no imaginary ones 😅');
+        return;
+      }
+      // Validate inputs positive where needed
+      if (L_total_Mbits <= 0 || R <= 0 || N <= 0 || num_routers < 0){
+        showError('All values must be positive.');
+        return;
+      }
+
+      // Calculate packet size (Mbits)
+      const L_packet_Mbits = L_total_Mbits / N;
+      // Convert to bits
+      const L_packet_bits = L_packet_Mbits * 1_000_000;
+      // Convert transmission rate to bps
+      const R_bps = R * 1_000_000;
+      // Transmission time per packet (seconds)
+      const t = L_packet_bits / R_bps;
+      // Hops = routers + 1 (destination)
+      const hops = num_routers + 1;
+
+      // Total delay without pipelining
+      const total_no_pipeline = N * hops * t;
+      // Total delay with pipelining
+      const total_pipeline = (N + hops - 1) * t;
+
+      // Prepare results for display
+      const results = [];
+      results.push(['Start Point', start]);
+      results.push(['Number of Routers', num_routers]);
+      results.push(['Hops (links)', hops]);
+      results.push(['Packet Size', `${L_packet_Mbits.toFixed(6)} Mbits (${Math.round(L_packet_bits).toLocaleString()} bits)`]);
+      results.push(['Transmission Time / Packet', `${t.toFixed(6)} sec (${(t*1000).toFixed(3)} ms)`]);
+      results.push(['Delay without Pipelining', `${total_no_pipeline.toFixed(6)} sec (${(total_no_pipeline*1000).toFixed(3)} ms)`]);
+      results.push(['Delay with Pipelining', `${total_pipeline.toFixed(6)} sec (${(total_pipeline*1000).toFixed(3)} ms)`]);
+
+      // Show results
+      renderResults(results);
+    }
+
+    // Render the results in the UI
+    function renderResults(rows){
+      const el = $('results');
+      el.innerHTML = '';
+
+      rows.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'result-line';
+
+        const left = document.createElement('div');
+        left.innerHTML = `<div class='muted'>${r[0]}</div>`;
+
+        const right = document.createElement('div');
+        right.innerHTML = `<strong>${r[1]}</strong>`;
+
+        div.appendChild(left);
+        div.appendChild(right);
+        el.appendChild(div);
+      });
+
+      // Add a copy button for convenience
+      const cp = document.createElement('div');
+      cp.style.marginTop = '10px';
+
+      const btn = document.createElement('button');
+      btn.textContent = 'Copy Results';
+      btn.onclick = () => {
+        const txt = rows.map(r => `${r[0]}: ${r[1]}`).join('\\n');
+        navigator.clipboard.writeText(txt).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy Results', 900);
+        });
+      };
+
+      cp.appendChild(btn);
+      el.appendChild(cp);
+    }
+
+    // Attach event listeners for buttons and enter key
+    $('calc').addEventListener('click', compute);
+    $('reset').addEventListener('click', () => {
+      $('start').value = 'PC';
+      $('routers').value = 3;
+      $('Ltotal').value = 10;
+      $('R').value = 5;
+      $('N').value = 5;
+      clearError();
+      $('results').innerHTML = "<div class='muted'>No calculation yet — press <strong>Calculate</strong>.</div>";
+    });
+    $('example').addEventListener('click', () => {
+      $('routers').value = 2;
+      $('Ltotal').value = 8;
+      $('R').value = 4;
+      $('N').value = 4;
+      compute();
+    });
+
+    // Press Enter in any input to trigger calculate
+    Array.from(document.querySelectorAll('input')).forEach(i =>
+      i.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          compute();
+        }
+      })
+    );
+  </script>
+</body>
+</html>
