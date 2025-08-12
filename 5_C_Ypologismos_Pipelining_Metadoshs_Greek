@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pipelining Delay Calculator — Nota's Nano-Tool</title>
+  <style>
+    :root{--bg:#0f1724;--card:#111827;--accent:#7c3aed;--muted:#9ca3af;--glass:rgba(255,255,255,0.04)}
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{margin:0;min-height:100vh;background:linear-gradient(160deg,#071030 0%, #071026 40%, #071018 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:28px}
+    .wrap{width:100%;max-width:920px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    header .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:0 6px 18px rgba(12,12,40,0.6)}
+    header h1{font-size:20px;margin:0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .card{background:linear-gradient(180deg,var(--card),#0b1220);padding:18px;border-radius:14px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid var(--glass)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+    input[type=text], input[type=number]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:14px}
+    .row{display:flex;gap:12px}
+    .small{font-size:12px;color:var(--muted)}
+    button{background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:0;font-weight:600;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .results{margin-top:12px;padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.03)}
+    .result-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.02)}
+    .result-line:last-child{border-bottom:0}
+    .muted{color:var(--muted)}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media(max-width:780px){.grid{grid-template-columns:1fr}header{gap:10px}.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">N</div>
+      <div>
+        <h1>Υπολογιστής Pipelining — Δίκτυα (student edition)</h1>
+        <div class="small">Δώσε τις τιμές και πάτα <strong>Υπολόγισε</strong>.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <label>📍 Σημείο εκκίνησης
+          <input id="start" type="text" placeholder="π.χ. PC, Source" value="PC"></label>
+
+        <label>🛣️ Αριθμός δρομολογητών (routers)
+          <input id="routers" type="number" min="0" step="1" value="3"></label>
+
+        <label>💾 Συνολικό μέγεθος μηνύματος (Mbits)
+          <input id="Ltotal" type="number" min="0.0001" step="0.0001" value="10"></label>
+
+        <label>⚙️ Ρυθμός μετάδοσης R (Mbps)
+          <input id="R" type="number" min="0.0001" step="0.0001" value="5"></label>
+
+        <label>📦 Αριθμός πακέτων (N)
+          <input id="N" type="number" min="1" step="1" value="5"></label>
+
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button id="calc">Υπολόγισε</button>
+          <button id="reset" class="secondary">Επαναφορά</button>
+          <button id="example" class="secondary">Παράδειγμα</button>
+        </div>
+
+        <div id="error" class="small" style="margin-top:10px;color:#ffb4b4;display:none"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">📊 Αποτελέσματα</h3>
+        <div id="results" class="results">
+          <div class="muted">Δεν έχει γίνει ακόμα υπολογισμός — πάτα <strong>Υπολόγισε</strong>.</div>
+        </div>
+
+        <footer>
+          <div>Σημείωση: Υπολογισμοί βασισμένοι μόνο σε μετάδοση (no propagation/queueing/processing delays).</div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const format = (v, d=6) => Number(v).toLocaleString('en-US', {maximumFractionDigits:d, minimumFractionDigits: d>0?Math.min(d,2):0});
+
+    function showError(msg){const e=$('error');e.style.display='block';e.textContent=msg}
+    function clearError(){const e=$('error');e.style.display='none';e.textContent=''}
+
+    function compute(){
+      clearError();
+      const start = $('start').value.trim() || 'Source';
+      const num_routers = Number($('routers').value);
+      const L_total_Mbits = Number($('Ltotal').value);
+      const R = Number($('R').value);
+      const N = Number($('N').value);
+
+      if (!Number.isFinite(num_routers) || !Number.isFinite(L_total_Mbits) || !Number.isFinite(R) || !Number.isFinite(N)){
+        showError('Βάλε έγκυρους αριθμούς — όχι φανταστικά νούμερα 😅'); return;
+      }
+      if (L_total_Mbits <= 0 || R <= 0 || N <= 0 || num_routers < 0){ showError('Όλες οι τιμές πρέπει να είναι θετικές.'); return; }
+
+      const L_packet_Mbits = L_total_Mbits / N;
+      const L_packet_bits = L_packet_Mbits * 1_000_000;
+      const R_bps = R * 1_000_000;
+      const t = L_packet_bits / R_bps; // sec per packet
+      const hops = num_routers + 1;
+
+      const total_no_pipeline = N * hops * t;
+      const total_pipeline = (N + hops - 1) * t;
+
+      const results = [];
+      results.push(['Αφετηρία', start]);
+      results.push(['Αριθμός δρομολογητών', num_routers]);
+      results.push(['Hops (ζεύξεις)', hops]);
+      results.push(['Μέγεθος πακέτου', `${L_packet_Mbits.toFixed(6)} Mbits (${Math.round(L_packet_bits).toLocaleString()} bits)`]);
+      results.push(['Χρόνος μετάδοσης / πακέτο', `${t.toFixed(6)} sec (${(t*1000).toFixed(3)} ms)`]);
+      results.push(['Καθυστέρηση χωρίς pipelining', `${total_no_pipeline.toFixed(6)} sec (${(total_no_pipeline*1000).toFixed(3)} ms)`]);
+      results.push(['Καθυστέρηση με pipelining', `${total_pipeline.toFixed(6)} sec (${(total_pipeline*1000).toFixed(3)} ms)`]);
+
+      renderResults(results);
+    }
+
+    function renderResults(rows){
+      const el = $('results');
+      el.innerHTML = '';
+      rows.forEach(r => {
+        const div = document.createElement('div'); div.className='result-line';
+        const left = document.createElement('div'); left.innerHTML = `<div class='muted'>${r[0]}</div>`;
+        const right = document.createElement('div'); right.innerHTML = `<strong>${r[1]}</strong>`;
+        div.appendChild(left); div.appendChild(right); el.appendChild(div);
+      });
+
+      // add a handy copy button
+      const cp = document.createElement('div'); cp.style.marginTop='10px';
+      const btn = document.createElement('button'); btn.textContent='Αντιγραφή Αποτελεσμάτων'; btn.onclick=()=>{
+        const txt = rows.map(r=>`${r[0]}: ${r[1]}`).join('\n'); navigator.clipboard.writeText(txt).then(()=>{btn.textContent='Αντέγραψα!'; setTimeout(()=>btn.textContent='Αντιγραφή Αποτελεσμάτων',900)});
+      };
+      cp.appendChild(btn); el.appendChild(cp);
+    }
+
+    $('calc').addEventListener('click', compute);
+    $('reset').addEventListener('click', ()=>{ $('start').value='PC'; $('routers').value=3; $('Ltotal').value=10; $('R').value=5; $('N').value=5; clearError(); $('results').innerHTML="<div class='muted'>Δεν έχει γίνει ακόμα υπολογισμός — πάτα <strong>Υπολόγισε</strong>.</div>" });
+    $('example').addEventListener('click', ()=>{ $('routers').value=2; $('Ltotal').value=8; $('R').value=4; $('N').value=4; compute(); });
+
+    // keyboard: Enter triggers compute when focus in any input
+    Array.from(document.querySelectorAll('input')).forEach(i=>i.addEventListener('keydown', e=>{ if(e.key==='Enter'){ compute(); }}));
+  </script>
+</body>
+</html>
