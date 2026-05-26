@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Subnet Calculator 👑 - Advanced</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #1e1e2f, #3a3a5c);
+      color: #fff;
+      padding: 2em;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 1em;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    button {
+      background-color: #6a5acd;
+      color: white;
+      border: none;
+      padding: 0.7em 1.5em;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 1.1em;
+    }
+    #results {
+      margin-top: 2em;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 1em;
+      border-radius: 10px;
+      word-wrap: break-word;
+    }
+    span {
+      font-weight: bold;
+      color: #ffd700;
+    }
+    table {
+      width: 100%;
+      margin-top: 1em;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 0.5em;
+      text-align: center;
+    }
+    th {
+      background-color: #444;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌐 Subnet Calculator - Advanced</h1>
+
+  <form id="subnetForm">
+    <label>IP Address:
+      <input type="text" id="ip" placeholder="e.g. 192.168.1.0" required />
+    </label>
+
+    <label>Base CIDR Prefix (1-30):
+      <input type="number" id="baseCidr" min="1" max="30" placeholder="e.g. 25" required />
+    </label>
+
+    <label>Choose subnetting method:
+      <select id="method" required>
+        <option value="" disabled selected>-- Select Method --</option>
+        <option value="subnets">Number of Subnets</option>
+        <option value="hosts">Hosts per Subnet</option>
+      </select>
+    </label>
+
+    <label id="subnetCountWrapper" style="display:none;">Number of Subnets:
+      <input type="number" id="subnetCount" min="1" />
+    </label>
+
+    <label id="hostCountWrapper" style="display:none;">Hosts per Subnet:
+      <input type="number" id="hostCount" min="1" />
+    </label>
+
+    <button type="submit">Calculate</button>
+  </form>
+
+  <div id="results" style="display:none;">
+    <h2>📊 Results:</h2>
+    <p><strong>New CIDR:</strong> <span id="newCidr"></span></p>
+    <p><strong>Subnet Mask:</strong> <span id="subnetMask"></span></p>
+    <p><strong>Number of Subnets:</strong> <span id="numSubnets"></span></p>
+    <p><strong>Hosts per Subnet:</strong> <span id="hostsPerSubnet"></span></p>
+
+    <h3>📋 Subnet Table:</h3>
+    <table id="subnetTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Network Address</th>
+          <th>First Host</th>
+          <th>Last Host</th>
+          <th>Broadcast</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    function nextPowerOfTwo(x) {
+      return Math.pow(2, Math.ceil(Math.log2(x)));
+    }
+
+    function subnetMaskFromCIDR(cidr) {
+      let mask = (~0 << (32 - cidr)) >>> 0;
+      return [
+        (mask >>> 24),
+        (mask >> 16) & 255,
+        (mask >> 8) & 255,
+        mask & 255
+      ].join('.');
+    }
+
+    function numToIP(num) {
+      return [
+        (num >>> 24),
+        (num >>> 16) & 255,
+        (num >>> 8) & 255,
+        num & 255
+      ].join('.');
+    }
+
+    document.getElementById('method').addEventListener('change', () => {
+      document.getElementById('subnetCountWrapper').style.display = 'none';
+      document.getElementById('hostCountWrapper').style.display = 'none';
+      if (method.value === 'subnets') {
+        subnetCountWrapper.style.display = 'block';
+      } else if (method.value === 'hosts') {
+        hostCountWrapper.style.display = 'block';
+      }
+    });
+
+    document.getElementById('subnetForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const ip = document.getElementById('ip').value.trim();
+      const ipParts = ip.split('.').map(Number);
+      const ipBase = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+
+      const baseCidr = parseInt(document.getElementById('baseCidr').value);
+      const method = document.getElementById('method').value;
+      const hostCount = parseInt(document.getElementById('hostCount').value);
+      const subnetCount = parseInt(document.getElementById('subnetCount').value);
+
+      let newCidr, numSubnets, hostsPerSubnet;
+
+      if (method === 'hosts') {
+        let n = Math.ceil(Math.log2(hostCount));
+        newCidr = 32 - n;
+        let diff = newCidr - baseCidr;
+        numSubnets = Math.pow(2, diff);
+        hostsPerSubnet = Math.pow(2, n);
+      } else if (method === 'subnets') {
+        let diff = Math.ceil(Math.log2(subnetCount));
+        newCidr = baseCidr + diff;
+        numSubnets = Math.pow(2, diff);
+        hostsPerSubnet = Math.pow(2, 32 - newCidr);
+      } else {
+        alert('Please select a method and provide a value.');
+        return;
+      }
+
+      const maskStr = subnetMaskFromCIDR(newCidr);
+
+      document.getElementById('newCidr').textContent = '/' + newCidr;
+      document.getElementById('subnetMask').textContent = maskStr;
+      document.getElementById('numSubnets').textContent = numSubnets;
+      document.getElementById('hostsPerSubnet').textContent = hostsPerSubnet;
+      document.getElementById('results').style.display = 'block';
+
+      // Generate subnet table
+      const tbody = document.querySelector('#subnetTable tbody');
+      tbody.innerHTML = '';
+      const blockSize = Math.pow(2, 32 - newCidr);
+
+      for (let i = 0; i < numSubnets; i++) {
+        const subnetStart = ipBase + (i * blockSize);
+        const network = numToIP(subnetStart);
+        const firstHost = numToIP(subnetStart + 1);
+        const lastHost = numToIP(subnetStart + blockSize - 2);
+        const broadcast = numToIP(subnetStart + blockSize - 1);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${network}</td>
+          <td>${firstHost}</td>
+          <td>${lastHost}</td>
+          <td>${broadcast}</td>
+        `;
+        tbody.appendChild(row);
+      }
+    });
+  </script>
+
+</body>
+</html>
